@@ -1,0 +1,368 @@
+/* 1. ИМПОРТ ШРИФТОВ (УБРАН ИЗ HTML) */
+/* Шрифты теперь импортируются через <style> в HTML, но вот их определение: */
+/* @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;900&family=Merriweather:wght@400;900&family=Montserrat:wght@400;900&family=Pacifico&family=Varela+Round&family=Fira+Code:wght@400;700&display=swap'); */
+
+/* Базовые стили */
+body { 
+    font-family: 'Varela Round', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+    margin: 0;
+    padding: 0;
+    background-color: #000000; 
+    color: #e0e0e0; 
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+    transition: font-family 0.5s;
+    box-sizing: border-box; 
+}
+
+/* Ключевые стили для синхронизации текста */
+:root {
+    --editor-font-size: 16px;
+    --editor-line-height: 1.5; 
+    --editor-padding-y: 15px; 
+    --active-color: #ff69b4; 
+    --color-square-size: 40px; 
+}
+
+/* =========================================== */
+/* === СТИЛИЗАЦИЯ СКРОЛЛБАРОВ (WEBKIT) === */
+/* =========================================== */
+
+.editor-wrapper::-webkit-scrollbar, textarea::-webkit-scrollbar { width: 10px; background-color: transparent; transition: background-color 0.3s ease-in-out; cursor: default; }
+.editor-wrapper::-webkit-scrollbar-track, textarea::-webkit-scrollbar-track { background: #0d0d0d; border-radius: 10px; transition: background 0.3s ease-in-out; cursor: default; }
+.editor-wrapper::-webkit-scrollbar-thumb, textarea::-webkit-scrollbar-thumb { background-color: rgba(255, 255, 255, 0.1); border-radius: 10px; border: 1px solid rgba(255, 255, 255, 0.05); transition: background-color 0.3s ease-in-out, border-color 0.3s ease-in-out; cursor: default; }
+.editor-wrapper::-webkit-scrollbar-thumb:hover, textarea::-webkit-scrollbar-thumb:hover { background-color: rgba(255, 255, 255, 0.4); border-color: rgba(255, 255, 255, 0.2); cursor: default; }
+.editor-wrapper.scrolling::-webkit-scrollbar-thumb, textarea.scrolling::-webkit-scrollbar-thumb { background-color: rgba(255, 255, 255, 0.25); border-color: rgba(255, 255, 255, 0.1); }
+.editor-wrapper, textarea { scrollbar-width: thin; scrollbar-color: rgba(255, 255, 255, 0.1) #0d0d0d; }
+.editor-wrapper:hover, textarea:hover { scrollbar-color: rgba(255, 255, 255, 0.4) #0d0d0d; }
+
+/* =========================================== */
+/* === ФОНОВЫЕ ЭФФЕКТЫ И ЧАСТИЦЫ === */
+/* =========================================== */
+
+#particle-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; overflow: hidden; }
+.particle { position: absolute; background: #fff; border-radius: 50%; opacity: 0; animation: rise 10s infinite linear; }
+@keyframes rise { 0% { transform: translateY(0); opacity: 0; } 10% { opacity: 0.7; } 90% { opacity: 0.7; } 100% { transform: translateY(-100vh); opacity: 0; } }
+
+.spot-container { position: fixed; top: 0; left: 0; width: 100%; height: 100vh; transform: translate(0, 0); animation: rotate-spots 30s linear infinite; pointer-events: none; z-index: -1; }
+@keyframes rotate-spots { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+.spot {
+    position: absolute;
+    background: rgba(255, 255, 255, 0.15); 
+    border-radius: 50%;
+    filter: blur(4px); 
+    box-shadow: 0 0 20px rgba(255, 255, 255, 0.3), 
+                0 0 40px rgba(255, 255, 255, 0.2);
+}
+.spot:nth-child(1) { width: 30px; height: 30px; top: 10%; left: 20%; }
+.spot:nth-child(2) { width: 20px; height: 20px; top: 70%; left: 10%; }
+.spot:nth-child(3) { width: 25px; height: 25px; top: 20%; right: 15%; }
+.spot:nth-child(4) { width: 35px; height: 35px; top: 80%; right: 25%; }
+.spot:nth-child(5) { width: 18px; height: 18px; top: 40%; left: 5%; }
+.spot:nth-child(6) { width: 28px; height: 28px; bottom: 5%; right: 40%; }
+
+
+/* =========================================== */
+/* === АНИМАЦИЯ ЦВЕТА ЗАГОЛОВКА === */
+/* =========================================== */
+/* Keyframes для color-cycle создаются динамически в JS, но базовый шаблон остается: */
+@keyframes color-cycle {
+    0%   { color: var(--color-0); text-shadow: 0 0 10px var(--color-0); }
+    25%  { color: var(--color-1); text-shadow: 0 0 10px var(--color-1); }
+    50%  { color: var(--color-2); text-shadow: 0 0 10px var(--color-2); }
+    75%  { color: var(--color-3); text-shadow: 0 0 10px var(--color-3); }
+    100% { color: var(--color-0); text-shadow: 0 0 10px var(--color-0); } 
+}
+
+/* Заголовок сайта */
+h1 { 
+    font-family: 'Varela Round', sans-serif; 
+    font-size: 48px; 
+    font-weight: 900;
+    text-align: center;
+    margin-bottom: 30px;
+    padding-bottom: 15px; 
+    
+    color: var(--active-color); 
+    text-shadow: 0 0 10px var(--active-color);
+    
+    animation: color-cycle 15s ease-in-out infinite; 
+    
+    border-bottom: 2px solid #333333; 
+    -webkit-background-clip: unset;
+    -webkit-text-fill-color: initial;
+    transition: all 0.5s;
+}
+
+/* =========================================== */
+/* === КОНТЕЙНЕР И КНОПКИ УПРАВЛЕНИЯ === */
+/* =========================================== */
+.container {
+    position: relative; 
+    width: 95%; 
+    max-width: 1200px; 
+    margin-top: 50px;
+    background: rgba(26, 26, 26, 0.75); 
+    backdrop-filter: blur(15px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 0 30px rgba(0, 0, 0, 0.5); 
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1; 
+    margin-bottom: 50px;
+    z-index: 1;
+    box-sizing: border-box; 
+}
+
+.top-controls { position: absolute; top: 15px; left: 15px; right: 15px; display: flex; justify-content: space-between; align-items: center; z-index: 10; }
+
+.control-button {
+    background: rgba(255, 255, 255, 0.1);
+    color: #ffffff;
+    border: none;
+    padding: 10px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: background 0.3s, box-shadow 0.3s;
+}
+
+.control-button:hover {
+    background: rgba(255, 255, 255, 0.2);
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
+}
+
+/* =========================================== */
+/* === МОДАЛЬНОЕ ОКНО === */
+/* =========================================== */
+.modal { display: none; position: fixed; z-index: 20; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.6); backdrop-filter: blur(5px); padding-top: 60px; }
+.modal-content { background-color: #2b2b2b; margin: 5% auto; padding: 30px; border-radius: 15px; width: 80%; max-width: 600px; box-shadow: 0 0 25px rgba(0,0,0,0.5); position: relative; }
+.modal-content h3 { border-bottom: 1px solid #444; padding-bottom: 10px; margin-bottom: 20px; color: #87ceeb; }
+.close-button { color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer; position: absolute; top: 10px; right: 20px; }
+
+/* Выбор шрифта */
+.font-selection, .color-selection { margin-bottom: 25px; }
+
+.font-selection label {
+    display: inline-block;
+    margin-right: 20px;
+    cursor: pointer;
+    padding: 5px 10px;
+    border-radius: 5px;
+    transition: background 0.2s;
+    font-size: 14px; 
+}
+.font-selection input[type="radio"]:checked + label { 
+    background-color: #007bff; 
+    color: white; 
+    box-shadow: 0 0 10px rgba(0, 123, 255, 0.5); 
+}
+.font-selection input[type="radio"] { display: none; }
+
+/* Выбор цвета */
+#color-squares-container { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+
+.color-square-wrapper { 
+    position: relative; 
+    display: flex; 
+    align-items: center; 
+    width: var(--color-square-size);
+    height: var(--color-square-size);
+}
+
+.color-square { 
+    width: var(--color-square-size); 
+    height: var(--color-square-size); 
+    border-radius: 8px; 
+    border: 2px solid #fff; 
+    cursor: pointer; 
+    box-shadow: 0 0 8px rgba(255, 255, 255, 0.3); 
+    transition: transform 0.1s; 
+    padding: 0; 
+}
+.color-square:hover { transform: scale(1.05); }
+.add-color-button { 
+    width: var(--color-square-size); 
+    height: var(--color-square-size); 
+    border-radius: 8px; 
+    background: #444; 
+    color: white; 
+    font-size: 24px; 
+    line-height: var(--color-square-size); 
+    text-align: center; 
+    cursor: pointer; 
+    border: 2px dashed #666; 
+    transition: background 0.2s; 
+}
+.add-color-button:hover { background: #666; border-color: #888; }
+
+/* Кнопка удаления цвета */
+.delete-color-button {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    background: #ff4d4d;
+    color: white;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    line-height: 20px;
+    text-align: center;
+    font-size: 12px;
+    cursor: pointer;
+    opacity: 0; 
+    transition: opacity 0.2s;
+    box-shadow: 0 0 5px rgba(0,0,0,0.5);
+    pointer-events: all;
+}
+
+.color-square-wrapper:hover .delete-color-button {
+    opacity: 1; 
+}
+.color-square-wrapper:first-child .delete-color-button {
+    display: none; 
+    pointer-events: none;
+}
+
+
+/* =========================================== */
+/* === СТИЛИ РЕДАКТОРА === */
+/* =========================================== */
+
+.editor-wrapper {
+    position: relative;
+    display: flex;
+    height: 60vh; 
+    border: 1px solid #444444; 
+    border-radius: 6px;
+    background-color: #0d0d0d; 
+    transition: border-color 0.3s ease-in-out;
+    box-shadow: none; 
+    cursor: default; 
+    overflow: hidden; 
+}
+
+.line-numbers {
+    /* ИСПРАВЛЕНИЕ: Увеличиваем min-width, чтобы вместить 4-5 цифр */
+    min-width: 55px; 
+    max-width: 60px; /* Ограничиваем на случай очень больших номеров */
+    
+    padding: var(--editor-padding-y) 10px 0 5px; 
+    box-sizing: border-box; 
+    text-align: right;
+    font-size: var(--editor-font-size); 
+    line-height: var(--editor-line-height); 
+    color: #666; 
+    background-color: #111111; 
+    user-select: none; 
+    
+    white-space: pre; /* Важно: предотвращает перенос строк */
+    
+    border-right: 1px solid #333;
+    flex-shrink: 0; 
+    height: 100%; 
+    
+    overflow-x: auto;
+    /* ИСПРАВЛЕНИЕ: Убираем вертикальный скроллбар для нумерации */
+    overflow-y: hidden; 
+    
+    scrollbar-width: none; /* Firefox */
+}
+.line-numbers::-webkit-scrollbar {
+     display: none; /* WebKit */
+}
+
+textarea { 
+    flex-grow: 1; 
+    min-width: 0; 
+    padding: var(--editor-padding-y); 
+    box-sizing: border-box; 
+    font-size: var(--editor-font-size); 
+    line-height: var(--editor-line-height); 
+    border: none; 
+    outline: none; 
+    resize: none; 
+    background-color: transparent;
+    color: #f0f0f0; 
+    
+    white-space: pre; /* Важно: сохраняет отступы и переносы как есть */
+    
+    height: 100%; 
+    cursor: text; 
+
+    overflow-x: auto;
+    overflow-y: scroll; 
+}
+
+textarea::placeholder { color: #888; }
+
+.editor-border-svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 2; opacity: 0; transition: opacity 0.3s ease-in-out; }
+.editor-wrapper:hover .editor-border-svg, .editor-wrapper.focused .editor-border-svg { opacity: 1; }
+.editor-border-svg path { fill: none; stroke: #ffffff; stroke-width: 1; stroke-dasharray: 5 4; filter: url(#glow); }
+@keyframes dash-animation { to { stroke-dashoffset: -150; } }
+.editor-wrapper:hover .editor-border-svg path, .editor-wrapper.focused .editor-border-svg path { animation: dash-animation 4s linear infinite; }
+.editor-wrapper:hover, .editor-wrapper.focused { box-shadow: 0 0 20px rgba(255, 255, 255, 0.3); }
+
+/* =========================================== */
+/* === АДАПТИВНОСТЬ (Media Queries) === */
+/* =========================================== */
+
+@media (max-width: 768px) {
+    body { padding-top: 10px; }
+    h1 { font-size: 32px; margin-bottom: 20px; }
+    
+    .container {
+        width: 98%;
+        padding: 15px 10px;
+        margin-top: 15px;
+        margin-bottom: 15px;
+    }
+    .top-controls { top: 10px; left: 10px; right: 10px; }
+    
+    .control-button {
+        padding: 6px 8px;
+        font-size: 14px;
+    }
+    
+    .editor-wrapper { height: 50vh; }
+    
+    .line-numbers {
+         min-width: 45px; /* Уменьшаем ширину нумерации для мобильных */
+         max-width: 50px;
+    }
+
+    .modal-content {
+        width: 90%; 
+        margin: 5% auto;
+        padding: 15px;
+    }
+    .modal-content h3 { font-size: 18px; margin-bottom: 15px; }
+    .close-button { font-size: 24px; top: 5px; right: 15px; }
+
+    .font-selection label {
+        display: block; 
+        margin-right: 0;
+        margin-bottom: 8px;
+        font-size: 12px; 
+    }
+    
+    :root {
+        --color-square-size: 30px; 
+    }
+
+    /* Всегда показываем кнопку удаления на мобильных */
+    .color-square-wrapper .delete-color-button {
+        opacity: 1;
+        width: 16px;
+        height: 16px;
+        line-height: 16px;
+        font-size: 10px;
+        top: -3px;
+        right: -3px;
+    }
+}
