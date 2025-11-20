@@ -1,0 +1,875 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>sitexchange</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    
+    <style>
+        /* =========================================== */
+        /* === ИМПОРТ ШРИФТОВ И БАЗА === */
+        /* =========================================== */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;900&family=Merriweather:wght@400;900&family=Montserrat:wght@400;700;900&family=Pacifico&family=Varela+Round&family=Fira+Code:wght@400;700&display=swap');
+
+        :root {
+            /* Редактор */
+            --editor-font-size: 16px;
+            --editor-line-height: 1.5; 
+            --editor-padding-y: 15px; 
+            --active-color: #ff69b4; 
+            --color-square-size: 40px;
+            
+            /* Кастомизация фона и частиц (значения по умолчанию) */
+            --bg-color: #000000;
+            
+            --particle-color: #ffffff;
+            --particle-size: 2px;
+            --particle-speed: 10s;
+            
+            --spot-color: rgba(255, 255, 255, 0.15);
+            --spot-blur: 4px;
+            --spot-size-mult: 1;
+            
+            /* Стиль контейнера (ИСПРАВЛЕНО: по умолчанию прозрачнее) */
+            --container-bg: rgba(30, 30, 30, 0.3); /* Было 0.75, стало 0.3 для эффекта стекла */
+            --container-backdrop: blur(20px);      /* Усилено размытие */
+            --container-border: 1px solid rgba(255, 255, 255, 0.08);
+            --container-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+        }
+
+        body { 
+            font-family: 'Varela Round', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color); 
+            color: #e0e0e0; 
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            transition: background-color 0.5s, font-family 0.5s;
+            box-sizing: border-box; 
+            overflow-x: hidden;
+        }
+
+        /* =========================================== */
+        /* === ФОНОВЫЕ ЭФФЕКТЫ (ЧАСТИЦЫ И ПЯТНА) === */
+        /* =========================================== */
+        
+        #particle-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; overflow: hidden; }
+        
+        .particle { 
+            position: absolute; 
+            background: var(--particle-color); 
+            border-radius: 50%; 
+            opacity: 0; 
+            animation: rise var(--particle-speed) infinite linear; 
+        }
+        @keyframes rise { 
+            0% { transform: translateY(0); opacity: 0; } 
+            10% { opacity: 0.7; } 
+            90% { opacity: 0.7; } 
+            100% { transform: translateY(-100vh); opacity: 0; } 
+        }
+
+        .spot-container { position: fixed; top: 0; left: 0; width: 100%; height: 100vh; animation: rotate-spots 60s linear infinite; pointer-events: none; z-index: -1; }
+        @keyframes rotate-spots { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+        .spot {
+            position: absolute;
+            background: var(--spot-color); 
+            border-radius: 50%;
+            filter: blur(var(--spot-blur)); 
+            transition: filter 0.5s, background 0.5s, transform 0.5s;
+        }
+        /* Позиции пятен */
+        .spot:nth-child(1) { width: calc(30px * var(--spot-size-mult)); height: calc(30px * var(--spot-size-mult)); top: 10%; left: 20%; }
+        .spot:nth-child(2) { width: calc(20px * var(--spot-size-mult)); height: calc(20px * var(--spot-size-mult)); top: 70%; left: 10%; }
+        .spot:nth-child(3) { width: calc(25px * var(--spot-size-mult)); height: calc(25px * var(--spot-size-mult)); top: 20%; right: 15%; }
+        .spot:nth-child(4) { width: calc(35px * var(--spot-size-mult)); height: calc(35px * var(--spot-size-mult)); top: 80%; right: 25%; }
+        .spot:nth-child(5) { width: calc(18px * var(--spot-size-mult)); height: calc(18px * var(--spot-size-mult)); top: 40%; left: 5%; }
+
+        /* =========================================== */
+        /* === ЗАГОЛОВОК === */
+        /* =========================================== */
+        @keyframes color-cycle {
+            0%   { color: var(--color-0); text-shadow: 0 0 10px var(--color-0); }
+            25%  { color: var(--color-1); text-shadow: 0 0 10px var(--color-1); }
+            50%  { color: var(--color-2); text-shadow: 0 0 10px var(--color-2); }
+            75%  { color: var(--color-3); text-shadow: 0 0 10px var(--color-3); }
+            100% { color: var(--color-0); text-shadow: 0 0 10px var(--color-0); } 
+        }
+
+        h1 { 
+            font-family: 'Varela Round', sans-serif; 
+            font-size: 48px; 
+            font-weight: 900;
+            text-align: center;
+            margin-top: 40px;
+            margin-bottom: 20px;
+            
+            color: var(--active-color); 
+            text-shadow: 0 0 10px var(--active-color);
+            
+            animation: color-cycle 15s ease-in-out infinite; 
+            
+            -webkit-background-clip: unset;
+            -webkit-text-fill-color: initial;
+            transition: all 0.5s;
+            z-index: 2;
+        }
+
+        /* =========================================== */
+        /* === ОСНОВНОЙ КОНТЕЙНЕР (Красная зона на скрине) === */
+        /* =========================================== */
+        .container {
+            position: relative; 
+            width: 95%; 
+            max-width: 1000px; 
+            
+            /* Применение переменных для эффекта */
+            background: var(--container-bg); 
+            backdrop-filter: var(--container-backdrop);
+            -webkit-backdrop-filter: var(--container-backdrop); /* Safari support */
+            border: var(--container-border);
+            box-shadow: var(--container-shadow);
+            
+            padding: 25px;
+            border-radius: 16px;
+            
+            display: flex;
+            flex-direction: column;
+            flex-grow: 1; 
+            margin-bottom: 50px;
+            z-index: 1;
+            box-sizing: border-box; 
+            transition: background 0.3s, backdrop-filter 0.3s, border 0.3s, box-shadow 0.3s;
+        }
+
+        /* =========================================== */
+        /* === ПАНЕЛЬ ИНСТРУМЕНТОВ (TOOLBAR) === */
+        /* =========================================== */
+        .toolbar {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .control-button {
+            background: rgba(255, 255, 255, 0.08);
+            color: #ffffff;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 8px 14px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-family: inherit;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s ease;
+        }
+
+        .control-button:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        }
+        
+        .control-button:active { transform: translateY(0); }
+
+        /* =========================================== */
+        /* === РЕДАКТОР И СКРОЛЛБАРЫ === */
+        /* =========================================== */
+
+        .editor-wrapper {
+            position: relative;
+            display: flex;
+            height: 60vh; 
+            border: 1px solid transparent; 
+            border-radius: 6px; 
+            background-color: rgba(13, 13, 13, 0.5); /* Немного прозрачный фон самого редактора */
+            transition: box-shadow 0.3s ease-in-out;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
+            cursor: text; 
+            overflow: hidden; 
+        }
+
+        /* Кастомные скроллбары */
+        .editor-wrapper::-webkit-scrollbar, textarea::-webkit-scrollbar { width: 8px; height: 8px; }
+        .editor-wrapper::-webkit-scrollbar-track, textarea::-webkit-scrollbar-track { background: #0d0d0d; }
+        .editor-wrapper::-webkit-scrollbar-thumb, textarea::-webkit-scrollbar-thumb { background-color: #333; border-radius: 4px; border: 2px solid #0d0d0d; }
+        .editor-wrapper::-webkit-scrollbar-thumb:hover, textarea::-webkit-scrollbar-thumb:hover { background-color: #555; }
+        .editor-wrapper, textarea { scrollbar-width: thin; scrollbar-color: #333 #0d0d0d; }
+        
+        /* Нумерация строк */
+        .line-numbers {
+            min-width: 45px; 
+            max-width: 55px;
+            padding: var(--editor-padding-y) 8px 0 5px; 
+            box-sizing: border-box; 
+            text-align: right;
+            font-size: var(--editor-font-size); 
+            line-height: var(--editor-line-height); 
+            color: #555; 
+            background-color: rgba(17, 17, 17, 0.8); 
+            user-select: none; 
+            white-space: pre; 
+            border-right: 1px solid rgba(255,255,255,0.1);
+            flex-shrink: 0; 
+            height: 100%; 
+            overflow: hidden; 
+        }
+        
+        /* Текстовое поле */
+        textarea { 
+            flex-grow: 1; 
+            min-width: 0; 
+            padding: var(--editor-padding-y); 
+            box-sizing: border-box; 
+            font-size: var(--editor-font-size); 
+            line-height: var(--editor-line-height); 
+            border: none; 
+            outline: none; 
+            resize: none; 
+            background-color: transparent;
+            color: #f0f0f0; 
+            white-space: pre; 
+            height: 100%; 
+            overflow-x: auto;
+            overflow-y: scroll; 
+            z-index: 1;
+        }
+
+        textarea::placeholder { color: #444; }
+        
+        /* SVG Граница */
+        .editor-border-svg { 
+            position: absolute; 
+            top: 0; 
+            left: 0; 
+            width: 100%; 
+            height: 100%; 
+            pointer-events: none; 
+            z-index: 5; 
+            opacity: 0; 
+            transition: opacity 0.3s ease-in-out; 
+        }
+        
+        .editor-border-svg rect { 
+            fill: none; 
+            stroke: #ffffff; 
+            stroke-width: 1.5; 
+            stroke-dasharray: 6 4; 
+            filter: url(#glow);
+            rx: 6px; 
+            ry: 6px;
+        }
+        
+        .editor-wrapper:hover .editor-border-svg, .editor-wrapper.focused .editor-border-svg { opacity: 1; }
+        
+        @keyframes dash-animation { to { stroke-dashoffset: -100; } }
+        
+        .editor-wrapper:hover .editor-border-svg rect, .editor-wrapper.focused .editor-border-svg rect { 
+            animation: dash-animation 3s linear infinite; 
+        }
+
+        /* =========================================== */
+        /* === МОДАЛЬНОЕ ОКНО НАСТРОЕК === */
+        /* =========================================== */
+        .modal { display: none; position: fixed; z-index: 100; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.7); backdrop-filter: blur(5px); padding-top: 40px; padding-bottom: 40px; }
+        .modal-content { background-color: #222; margin: 0 auto; padding: 0; border-radius: 15px; width: 90%; max-width: 550px; box-shadow: 0 0 30px rgba(0,0,0,0.6); position: relative; overflow: hidden; border: 1px solid #333; }
+        
+        .modal-header { padding: 20px 25px; background: #2a2a2a; border-bottom: 1px solid #333; display: flex; justify-content: space-between; align-items: center; }
+        .modal-header h3 { margin: 0; color: #fff; font-size: 20px; }
+        .close-button { color: #aaa; font-size: 24px; cursor: pointer; transition: color 0.2s; }
+        .close-button:hover { color: #fff; }
+        
+        .modal-body { padding: 25px; max-height: 70vh; overflow-y: auto; }
+
+        /* Секции настроек */
+        .setting-group { margin-bottom: 30px; border-bottom: 1px solid #333; padding-bottom: 20px; }
+        .setting-group:last-child { border-bottom: none; margin-bottom: 0; }
+        .setting-title { font-size: 16px; font-weight: bold; color: #87ceeb; margin-bottom: 15px; display: flex; align-items: center; gap: 10px; }
+        
+        /* Контролы форм */
+        .form-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .form-label { font-size: 14px; color: #ccc; }
+        
+        input[type="color"] { border: none; width: 40px; height: 30px; cursor: pointer; background: none; padding: 0; }
+        input[type="range"] { width: 120px; cursor: pointer; }
+        select { background: #333; color: #fff; border: 1px solid #444; padding: 5px 10px; border-radius: 4px; outline: none; }
+
+        /* Выбор шрифта (радио) */
+        .font-options { display: flex; flex-wrap: wrap; gap: 10px; }
+        .font-radio-label { 
+            padding: 6px 12px; 
+            background: #333; 
+            border-radius: 6px; 
+            font-size: 13px; 
+            cursor: pointer; 
+            border: 1px solid #444;
+            transition: all 0.2s;
+        }
+        input[name="font"]:checked + .font-radio-label { background: #007bff; color: white; border-color: #007bff; }
+        input[name="font"] { display: none; }
+
+        /* Цвета заголовка */
+        #color-squares-container { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+        .color-square-wrapper { position: relative; width: 35px; height: 35px; }
+        .color-square { width: 100%; height: 100%; border-radius: 6px; border: 2px solid #fff; cursor: pointer; padding: 0; }
+        .add-color-button { width: 35px; height: 35px; border-radius: 6px; background: #333; color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; border: 1px dashed #666; }
+        .delete-color-button { position: absolute; top: -5px; right: -5px; background: #ff4d4d; color: white; border-radius: 50%; width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; font-size: 10px; cursor: pointer; opacity: 0; transition: opacity 0.2s; }
+        .color-square-wrapper:hover .delete-color-button { opacity: 1; }
+        
+        /* =========================================== */
+        /* === АДАПТИВНОСТЬ === */
+        /* =========================================== */
+        @media (max-width: 768px) {
+            h1 { font-size: 32px; margin-top: 20px; }
+            .container { width: 98%; padding: 15px; }
+            .toolbar { flex-wrap: wrap; }
+            .editor-wrapper { height: 50vh; }
+            .modal-content { width: 95%; }
+        }
+
+    </style>
+</head>
+<body>
+
+    <div id="particle-container"></div>
+    <div class="spot-container">
+        <div class="spot"></div>
+        <div class="spot"></div>
+        <div class="spot"></div>
+        <div class="spot"></div>
+        <div class="spot"></div>
+    </div>
+
+    <h1 id="main-title">sitexchange</h1>
+
+    <div class="container">
+        
+        <div class="toolbar">
+            <button class="control-button" onclick="openModal()">
+                <i class="fas fa-sliders-h"></i> Настройки
+            </button>
+            <button class="control-button" onclick="copyText()" id="copy-btn">
+                <i class="fas fa-copy"></i> Копировать
+            </button>
+            <button class="control-button" onclick="clearEditor()" style="color: #ff9999; border-color: rgba(255,0,0,0.2);">
+                <i class="fas fa-trash-alt"></i> Очистить
+            </button>
+        </div>
+        
+        <div class="editor-wrapper" id="editor-wrapper">
+            <svg class="editor-border-svg" id="editor-border-svg" preserveAspectRatio="none">
+                <defs>
+                    <filter id="glow">
+                        <feGaussianBlur in="SourceGraphic" stdDeviation="2" result="blur"></feGaussianBlur>
+                        <feMerge>
+                            <feMergeNode in="blur"></feMergeNode>
+                            <feMergeNode in="SourceGraphic"></feMergeNode>
+                        </feMerge>
+                    </filter>
+                </defs>
+                <rect id="border-rect" x="1" y="1" width="100%" height="100%"></rect>
+            </svg>
+
+            <div id="line-numbers" class="line-numbers">1</div>
+            <textarea id="shared-text" placeholder="Начните ввод..."></textarea>
+        </div>
+    </div>
+
+    <div id="settingsModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-cog"></i> Настройки</h3>
+                <span class="close-button" onclick="closeModal()">&times;</span>
+            </div>
+            
+            <div class="modal-body">
+                
+                <div class="setting-group">
+                    <div class="setting-title"><i class="fas fa-font"></i> Текст и Заголовок</div>
+                    
+                    <div style="margin-bottom: 10px; font-size: 14px; color:#ccc;">Шрифт:</div>
+                    <div class="font-options" id="font-options">
+                        <input type="radio" id="f-default" name="font" value="Varela Round" checked><label for="f-default" class="font-radio-label" style="font-family:'Varela Round'">Varela</label>
+                        <input type="radio" id="f-mont" name="font" value="Montserrat"><label for="f-mont" class="font-radio-label" style="font-family:'Montserrat'">Montserrat</label>
+                        <input type="radio" id="f-inter" name="font" value="Inter"><label for="f-inter" class="font-radio-label" style="font-family:'Inter'">Inter</label>
+                        <input type="radio" id="f-mono" name="font" value="Fira Code"><label for="f-mono" class="font-radio-label" style="font-family:'Fira Code'">Mono</label>
+                        <input type="radio" id="f-pacifico" name="font" value="Pacifico"><label for="f-pacifico" class="font-radio-label" style="font-family:'Pacifico'">Script</label>
+                    </div>
+
+                    <div style="margin-top: 15px; font-size: 14px; color:#ccc;">Цвет анимации заголовка:</div>
+                    <div id="color-squares-container"></div>
+                </div>
+
+                <div class="setting-group">
+                    <div class="setting-title"><i class="fas fa-layer-group"></i> Оформление блока</div>
+                    <div class="form-row">
+                        <span class="form-label">Эффект блока:</span>
+                        <select id="container-effect" onchange="updateContainerEffect()">
+                            <option value="glass">Зеркальное (Glass)</option>
+                            <option value="matte">Матовое (Matte)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="setting-group">
+                    <div class="setting-title"><i class="fas fa-paint-brush"></i> Фон и Эффекты</div>
+                    
+                    <div class="form-row">
+                        <span class="form-label">Цвет заднего фона:</span>
+                        <input type="color" id="bg-color-picker" oninput="updateBackgroundSettings()">
+                    </div>
+
+                    <h4 style="margin: 15px 0 10px; font-size: 14px; color: #aaa; border-bottom: 1px dashed #444; padding-bottom: 5px;">Маленькие частицы</h4>
+                    <div class="form-row">
+                        <span class="form-label">Цвет:</span>
+                        <input type="color" id="particle-color-picker" oninput="updateBackgroundSettings()">
+                    </div>
+                    <div class="form-row">
+                        <span class="form-label">Размер:</span>
+                        <input type="range" id="particle-size-range" min="1" max="5" step="0.5" oninput="updateBackgroundSettings()">
+                    </div>
+                    <div class="form-row">
+                        <span class="form-label">Скорость (сек):</span>
+                        <input type="range" id="particle-speed-range" min="2" max="20" step="1" style="direction: rtl" oninput="updateBackgroundSettings()">
+                    </div>
+
+                    <h4 style="margin: 15px 0 10px; font-size: 14px; color: #aaa; border-bottom: 1px dashed #444; padding-bottom: 5px;">Большие пятна (Blur)</h4>
+                    <div class="form-row">
+                        <span class="form-label">Цвет:</span>
+                        <input type="color" id="spot-color-picker" oninput="updateBackgroundSettings()">
+                    </div>
+                    <div class="form-row">
+                        <span class="form-label">Размытие (Blur):</span>
+                        <input type="range" id="spot-blur-range" min="0" max="20" step="1" oninput="updateBackgroundSettings()">
+                    </div>
+                     <div class="form-row">
+                        <span class="form-label">Размер пятен:</span>
+                        <input type="range" id="spot-size-range" min="0.5" max="2" step="0.1" oninput="updateBackgroundSettings()">
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // === КОНФИГУРАЦИЯ FIREBASE ===
+        const firebaseConfig = {
+          apiKey: "AIzaSyCDds9Z98wQzElwisY5Y9O-NtF0oK92S4M",
+          authDomain: "sitexchange.firebaseapp.com",
+          databaseURL: "https://sitexchange-default-rtdb.europe-west1.firebasedatabase.app", 
+          projectId: "sitexchange",
+          storageBucket: "sitexchange.firebasestorage.app",
+          messagingSenderId: "729024451406",
+          appId: "1:729024451406:web:a140b9f82eec954496041f",
+          measurementId: "G-D39E2FPR9Y"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+        const textRef = database.ref('sharedText/publicNote'); 
+        
+        // === DOM ELEMENTS ===
+        const textarea = document.getElementById('shared-text');
+        const lineNumbersElement = document.getElementById('line-numbers');
+        const editorWrapper = document.getElementById('editor-wrapper'); 
+        const borderRect = document.getElementById('border-rect');
+        const titleElement = document.getElementById('main-title');
+        const colorSquaresContainer = document.getElementById('color-squares-container');
+        const modal = document.getElementById('settingsModal');
+        const fontOptions = document.getElementById('font-options');
+        const root = document.documentElement;
+        
+        let typingTimeout;
+        let scrollTimeout; 
+        
+        // === ПЕРЕМЕННЫЕ НАСТРОЕК (State) ===
+        let settings = {
+            gradientColors: ['#ff69b4', '#9932cc', '#87ceeb', '#007bff'],
+            font: 'Varela Round',
+            bgColor: '#000000',
+            containerEffect: 'glass',
+            particleColor: '#ffffff',
+            particleSize: 2,
+            particleSpeed: 10,
+            spotColor: '#ffffff', 
+            spotBlur: 4,
+            spotSize: 1
+        };
+
+        // ===========================================
+        // === ФУНКЦИИ МОДАЛЬНОГО ОКНА ===
+        // ===========================================
+        function openModal() {
+            modal.style.display = 'block';
+            renderColorSquares();
+            syncInputsWithSettings();
+        }
+
+        function closeModal() {
+            modal.style.display = 'none';
+        }
+        
+        window.onclick = function(event) {
+            if (event.target == modal) closeModal();
+        }
+        
+        // ===========================================
+        // === ЛОГИКА РЕДАКТОРА И КОПИРОВАНИЯ ===
+        // ===========================================
+        function clearEditor() {
+            if (confirm("Вы уверены, что хотите очистить поле?")) {
+                textarea.value = '';
+                textRef.set('');
+                updateLineNumbers();
+            }
+        }
+
+        function copyText() {
+            if(!textarea.value) return;
+            
+            navigator.clipboard.writeText(textarea.value).then(() => {
+                const btn = document.getElementById('copy-btn');
+                const originalHTML = btn.innerHTML;
+                btn.innerHTML = '<i class="fas fa-check"></i> Скопировано';
+                btn.style.background = 'rgba(40, 167, 69, 0.3)';
+                
+                setTimeout(() => {
+                    btn.innerHTML = originalHTML;
+                    btn.style.background = '';
+                }, 2000);
+            }).catch(err => {
+                console.error('Ошибка копирования', err);
+            });
+        }
+
+        // ===========================================
+        // === ЛОГИКА SVG ГРАНИЦЫ ===
+        // ===========================================
+        function updateSvgBorder() {
+            const width = editorWrapper.clientWidth;
+            const height = editorWrapper.clientHeight;
+            
+            // 1.5 - это stroke-width. Отступ 1px позволяет линии быть четкой.
+            borderRect.setAttribute('width', width - 2); 
+            borderRect.setAttribute('height', height - 2);
+        }
+
+        // ===========================================
+        // === ЛОГИКА НАСТРОЕК ВИЗУАЛА ===
+        // ===========================================
+        
+        function syncInputsWithSettings() {
+            document.getElementById('bg-color-picker').value = settings.bgColor;
+            document.getElementById('container-effect').value = settings.containerEffect;
+            document.getElementById('particle-color-picker').value = settings.particleColor;
+            document.getElementById('particle-size-range').value = settings.particleSize;
+            document.getElementById('particle-speed-range').value = settings.particleSpeed;
+            
+            document.getElementById('spot-color-picker').value = rgbToHex(settings.spotColor) || '#ffffff';
+            document.getElementById('spot-blur-range').value = settings.spotBlur;
+            document.getElementById('spot-size-range').value = settings.spotSize;
+
+            const fontRadio = document.querySelector(`input[name="font"][value="${settings.font}"]`);
+            if(fontRadio) fontRadio.checked = true;
+        }
+
+        function updateBackgroundSettings() {
+            const bgColor = document.getElementById('bg-color-picker').value;
+            const pColor = document.getElementById('particle-color-picker').value;
+            const pSize = document.getElementById('particle-size-range').value;
+            const pSpeed = document.getElementById('particle-speed-range').value;
+            
+            const sColorHex = document.getElementById('spot-color-picker').value;
+            const sBlur = document.getElementById('spot-blur-range').value;
+            const sSize = document.getElementById('spot-size-range').value;
+
+            root.style.setProperty('--bg-color', bgColor);
+            root.style.setProperty('--particle-color', pColor);
+            root.style.setProperty('--particle-speed', pSpeed + 's');
+            
+            const particles = document.querySelectorAll('.particle');
+            particles.forEach(p => {
+                p.style.backgroundColor = pColor;
+                p.style.animationDuration = (Math.random() * 5 + parseFloat(pSpeed)) + 's';
+            });
+
+            const sColorRgb = hexToRgb(sColorHex);
+            const sColorRgba = `rgba(${sColorRgb.r}, ${sColorRgb.g}, ${sColorRgb.b}, 0.15)`;
+            
+            root.style.setProperty('--spot-color', sColorRgba);
+            root.style.setProperty('--spot-blur', sBlur + 'px');
+            root.style.setProperty('--spot-size-mult', sSize);
+
+            settings.bgColor = bgColor;
+            settings.particleColor = pColor;
+            settings.particleSize = pSize;
+            settings.particleSpeed = pSpeed;
+            settings.spotColor = sColorRgba; 
+            settings.spotBlur = sBlur;
+            settings.spotSize = sSize;
+            
+            saveSettings();
+        }
+
+        function updateContainerEffect() {
+            const effect = document.getElementById('container-effect').value;
+            settings.containerEffect = effect;
+            
+            if (effect === 'matte') {
+                // МАТОВЫЙ: Сплошной цвет, нет размытия
+                root.style.setProperty('--container-bg', '#1a1a1a'); // Сплошной
+                root.style.setProperty('--container-backdrop', 'none');
+                root.style.setProperty('--container-border', '1px solid #333');
+                root.style.setProperty('--container-shadow', '0 10px 30px rgba(0,0,0,0.8)');
+            } else {
+                // СТЕКЛО: Прозрачный цвет, сильное размытие
+                root.style.setProperty('--container-bg', 'rgba(30, 30, 30, 0.3)'); // Прозрачный (30%)
+                root.style.setProperty('--container-backdrop', 'blur(20px)');
+                root.style.setProperty('--container-border', '1px solid rgba(255, 255, 255, 0.08)');
+                root.style.setProperty('--container-shadow', '0 10px 40px rgba(0, 0, 0, 0.5)');
+            }
+            saveSettings();
+        }
+
+        function hexToRgb(hex) {
+            const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+            return result ? {
+                r: parseInt(result[1], 16),
+                g: parseInt(result[2], 16),
+                b: parseInt(result[3], 16)
+            } : {r:255, g:255, b:255};
+        }
+        function rgbToHex(rgba) {
+            if(!rgba || rgba.indexOf('#') === 0) return rgba;
+            let parts = rgba.substring(rgba.indexOf('(')).split(',');
+            if(parts.length < 3) return '#ffffff';
+            let r = parseInt(parts[0].substring(1).trim());
+            let g = parseInt(parts[1].trim());
+            let b = parseInt(parts[2].trim());
+            return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+        }
+
+        // ===========================================
+        // === ЛОГИКА ЗАГОЛОВКА ===
+        // ===========================================
+        function updateColorAnimation() {
+            if (settings.gradientColors.length === 1) {
+                root.style.setProperty('--active-color', settings.gradientColors[0]);
+                titleElement.style.animation = 'none';
+                return;
+            }
+            
+            const stepSize = 100 / settings.gradientColors.length; 
+            let keyframes = `@keyframes color-cycle {`;
+            
+            for(let i = 0; i < settings.gradientColors.length; i++) {
+                root.style.setProperty(`--color-${i}`, settings.gradientColors[i]);
+            }
+            
+            settings.gradientColors.forEach((color, index) => {
+                const percentage = index * stepSize;
+                keyframes += `${percentage}% { color: var(--color-${index}); text-shadow: 0 0 10px var(--color-${index}); } `;
+            });
+            
+            keyframes += `100% { color: var(--color-0); text-shadow: 0 0 10px var(--color-0); } }`;
+            
+            let style = document.getElementById('color-animation-style');
+            if (!style) {
+                style = document.createElement('style');
+                style.id = 'color-animation-style';
+                document.head.appendChild(style);
+            }
+            style.innerHTML = keyframes;
+            
+            root.style.setProperty('--active-color', settings.gradientColors[0]);
+            titleElement.style.animation = 'color-cycle 15s ease-in-out infinite';
+            saveSettings();
+        }
+
+        function renderColorSquares() {
+            colorSquaresContainer.innerHTML = '';
+            settings.gradientColors.forEach((color, index) => {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'color-square-wrapper';
+                
+                const square = document.createElement('input');
+                square.type = 'color';
+                square.className = 'color-square';
+                square.value = color;
+                square.style.backgroundColor = color;
+                
+                square.addEventListener('input', (e) => {
+                    const newColor = e.target.value;
+                    e.target.style.backgroundColor = newColor;
+                    settings.gradientColors[index] = newColor;
+                    updateColorAnimation(); 
+                });
+                
+                const deleteButton = document.createElement('div');
+                deleteButton.className = 'delete-color-button';
+                deleteButton.innerHTML = '<i class="fas fa-times"></i>';
+                deleteButton.onclick = (e) => {
+                    e.stopPropagation(); 
+                    if (settings.gradientColors.length > 1) {
+                        settings.gradientColors.splice(index, 1);
+                        renderColorSquares();
+                        updateColorAnimation();
+                    }
+                };
+                
+                wrapper.appendChild(square);
+                if (settings.gradientColors.length > 1) wrapper.appendChild(deleteButton);
+                colorSquaresContainer.appendChild(wrapper);
+            });
+            
+            if (settings.gradientColors.length < 5) {
+                const addButton = document.createElement('div');
+                addButton.className = 'add-color-button';
+                addButton.innerHTML = '<i class="fas fa-plus"></i>';
+                addButton.onclick = () => {
+                    settings.gradientColors.push('#ffffff');
+                    renderColorSquares();
+                    updateColorAnimation();
+                };
+                colorSquaresContainer.appendChild(addButton);
+            }
+        }
+
+        function applyFont(fontName) {
+            settings.font = fontName;
+            titleElement.style.fontFamily = `'${fontName}', sans-serif`;
+            document.body.style.fontFamily = `'${fontName}', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif`;
+            saveSettings();
+        }
+        
+        fontOptions.addEventListener('change', (e) => {
+            if (e.target.name === 'font') applyFont(e.target.value);
+        });
+
+        // ===========================================
+        // === LOCAL STORAGE ===
+        // ===========================================
+        function saveSettings() {
+            localStorage.setItem('siteSettings', JSON.stringify(settings));
+        }
+        
+        function loadSettings() {
+            const saved = localStorage.getItem('siteSettings');
+            if (saved) {
+                settings = { ...settings, ...JSON.parse(saved) };
+            }
+            
+            applyFont(settings.font);
+            updateColorAnimation();
+            
+            root.style.setProperty('--bg-color', settings.bgColor);
+            root.style.setProperty('--particle-color', settings.particleColor);
+            root.style.setProperty('--particle-speed', settings.particleSpeed + 's');
+            root.style.setProperty('--spot-color', settings.spotColor);
+            root.style.setProperty('--spot-blur', settings.spotBlur + 'px');
+            root.style.setProperty('--spot-size-mult', settings.spotSize);
+            
+            document.getElementById('container-effect').value = settings.containerEffect;
+            updateContainerEffect(); 
+        }
+
+        // ===========================================
+        // === ИНИЦИАЛИЗАЦИЯ ЧАСТИЦ ===
+        // ===========================================
+        function createParticles() {
+            const container = document.getElementById('particle-container');
+            container.innerHTML = ''; 
+            const count = 50;
+            for (let i = 0; i < count; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                const size = (Math.random() * 2 + 1) * (settings.particleSize / 2); 
+                particle.style.width = `${size}px`;
+                particle.style.height = `${size}px`;
+                particle.style.left = `${Math.random() * 100}%`;
+                particle.style.top = `${Math.random() * 100 + 100}%`; 
+                particle.style.animationDuration = `${Math.random() * 10 + parseInt(settings.particleSpeed)}s`; 
+                particle.style.animationDelay = `${Math.random() * 10}s`; 
+                container.appendChild(particle);
+            }
+        }
+
+        // ===========================================
+        // === БАЗОВАЯ ЛОГИКА РЕДАКТОРА ===
+        // ===========================================
+        function updateLineNumbers() {
+            const lines = textarea.value.split('\n');
+            const lineCount = lines.length; 
+            let numbers = '';
+            for (let i = 1; i <= lineCount; i++) numbers += i + '\n';
+            
+            if (textarea.value === '') {
+                lineNumbersElement.innerText = '1';
+                return;
+            }
+            if (!textarea.value.endsWith('\n') && numbers.endsWith('\n')) {
+                 numbers = numbers.slice(0, -1);
+            }
+            lineNumbersElement.innerText = numbers;
+        }
+        
+        textRef.on('value', (snapshot) => {
+            const data = snapshot.val();
+            if (data !== null) {
+                if (textarea.value !== data) {
+                    textarea.value = data;
+                    updateLineNumbers(); 
+                }
+            } else {
+                textarea.value = '';
+                updateLineNumbers();
+            }
+        });
+
+        textarea.addEventListener('input', () => {
+            updateLineNumbers(); 
+            clearTimeout(typingTimeout);
+            typingTimeout = setTimeout(() => {
+                textRef.set(textarea.value).catch((e) => console.error(e));
+            }, 300);
+        });
+
+        textarea.addEventListener('scroll', () => {
+            lineNumbersElement.scrollTop = textarea.scrollTop;
+            editorWrapper.classList.add('scrolling');
+            clearTimeout(scrollTimeout);
+            scrollTimeout = setTimeout(() => {
+                editorWrapper.classList.remove('scrolling');
+            }, 300); 
+        });
+
+        textarea.addEventListener('focus', () => editorWrapper.classList.add('focused'));
+        textarea.addEventListener('blur', () => editorWrapper.classList.remove('focused'));
+
+        window.addEventListener('load', () => {
+            loadSettings(); 
+            updateLineNumbers();
+            updateSvgBorder(); 
+            createParticles(); 
+        });
+
+        window.addEventListener('resize', updateSvgBorder);
+
+    </script>
+</body>
+</html>
